@@ -4,77 +4,119 @@ generator client {
 
 datasource db {
   provider = "mysql"
-  url      = "mysql://root:Atlet13k!@localhost:3306/drive2gether"
+  url      = env("DATABASE_URL")
 }
 
-model User {
-  ID             Int      @id @default(autoincrement())
-  FirstName      String
-  LastName       String
-  Age            Int
-  PhoneNumber    String   @unique
-  Email          String   @unique
-  Address        String
-  Picture        String?
-  Password       String
-  Role           Role
+model car {
+  CarID        Int      @id @default(autoincrement())
+  OwnerID      Int?
+  Brand        String?  @db.VarChar(100)
+  Model        String?  @db.VarChar(100)
+  LicensePlate String?  @unique(map: "LicensePlate") @db.VarChar(50)
+  Seats        Int?
+  isVerified   Boolean? @default(false)
+  user         user?    @relation(fields: [OwnerID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "car_ibfk_1")
+  trip         trip[]
 
-  car            Car[]
-  tripPassenger  TripPassenger[]
+  @@index([OwnerID], map: "OwnerID")
 }
 
-model Car {
-  ID                 Int      @id @default(autoincrement())
-  Model              String?
-  Brand              String?
-  LicensePlate       String   @unique
-  Color              String?
-  DriverLicenseImage String?
-  IdentityCardImage  String?
-  DriverID           Int
+model message {
+  MessageID                     Int      @id @default(autoincrement())
+  TripID                        Int?
+  SenderID                      Int?
+  ReceiverID                    Int?
+  Content                       String?  @db.Text
+  IsRead                        Boolean? @default(false)
+  trip                          trip?    @relation(fields: [TripID], references: [TripID], onDelete: NoAction, onUpdate: NoAction, map: "message_ibfk_1")
+  user_message_SenderIDTouser   user?    @relation("message_SenderIDTouser", fields: [SenderID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "message_ibfk_2")
+  user_message_ReceiverIDTouser user?    @relation("message_ReceiverIDTouser", fields: [ReceiverID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "message_ibfk_3")
 
-  user User @relation(fields: [DriverID], references: [ID])
-  trip Trip[]
+  @@index([ReceiverID], map: "ReceiverID")
+  @@index([SenderID], map: "SenderID")
+  @@index([TripID], map: "TripID")
 }
 
-model Trip {
-  ID             Int      @id @default(autoincrement())
-  DeparturePlace String
-  DepartureTime  DateTime
-  ArrivalPlace   String
-  Price          Decimal?
-  PaymentMethod  PaymentMethod
-  CarID          Int
-
-  car            Car @relation(fields: [CarID], references: [ID])
-  tripPassenger  TripPassenger[]
-}
-
-model TripPassenger {
-  TripID      Int
-  PassengerID Int
-  Status      BookingStatus
-
-  trip        Trip @relation(fields: [TripID], references: [ID])
-  user        User @relation(fields: [PassengerID], references: [ID])
+model passengerbooking {
+  TripID         Int
+  PassengerID    Int
+  SeatsRequested Int?                            @default(1)
+  BookingStatus  passengerbooking_BookingStatus?
+  trip           trip                            @relation(fields: [TripID], references: [TripID], onDelete: NoAction, onUpdate: NoAction, map: "passengerbooking_ibfk_1")
+  user           user                            @relation(fields: [PassengerID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "passengerbooking_ibfk_2")
 
   @@id([TripID, PassengerID])
+  @@index([PassengerID], map: "PassengerID")
 }
 
-enum Role {
-  Driver
-  Passenger
-  Both
+model review {
+  ReviewID                     Int                @id @default(autoincrement())
+  TripID                       Int?
+  ReviewerID                   Int?
+  ReviewedID                   Int?
+  Rating                       Int?
+  Comment                      String?            @db.Text
+  ReviewType                   review_ReviewType?
+  trip                         trip?              @relation(fields: [TripID], references: [TripID], onDelete: NoAction, onUpdate: NoAction, map: "review_ibfk_1")
+  user_review_ReviewerIDTouser user?              @relation("review_ReviewerIDTouser", fields: [ReviewerID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "review_ibfk_2")
+  user_review_ReviewedIDTouser user?              @relation("review_ReviewedIDTouser", fields: [ReviewedID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "review_ibfk_3")
+
+  @@index([ReviewedID], map: "ReviewedID")
+  @@index([ReviewerID], map: "ReviewerID")
+  @@index([TripID], map: "TripID")
 }
 
-enum PaymentMethod {
-  Cash
-  Card
-  Online
+model trip {
+  TripID           Int                @id @default(autoincrement())
+  DriverID         Int?
+  CarID            Int?
+  StartLocation    String?            @db.VarChar(255)
+  EndLocation      String?            @db.VarChar(255)
+  DepartureTime    DateTime?          @db.DateTime(0)
+  Price            Decimal?           @db.Decimal(10, 2)
+  SeatsOffered     Int?
+  SeatsBooked      Int?               @default(0)
+  TripStatus       trip_TripStatus?
+  message          message[]
+  passengerbooking passengerbooking[]
+  review           review[]
+  user             user?              @relation(fields: [DriverID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "trip_ibfk_1")
+  car              car?               @relation(fields: [CarID], references: [CarID], onDelete: NoAction, onUpdate: NoAction, map: "trip_ibfk_2")
+
+  @@index([CarID], map: "CarID")
+  @@index([DriverID], map: "DriverID")
 }
 
-enum BookingStatus {
+model user {
+  UserID                           Int                @id @default(autoincrement())
+  FirstName                        String?            @db.VarChar(100)
+  LastName                         String?            @db.VarChar(100)
+  DateOfBirth                      DateTime?          @db.Date
+  Email                            String?            @unique(map: "Email") @db.VarChar(255)
+  Address                          String?            @db.VarChar(255)
+  PasswordHash                     String?            @db.VarChar(255)
+  car                              car[]
+  message_message_SenderIDTouser   message[]          @relation("message_SenderIDTouser")
+  message_message_ReceiverIDTouser message[]          @relation("message_ReceiverIDTouser")
+  passengerbooking                 passengerbooking[]
+  review_review_ReviewerIDTouser   review[]           @relation("review_ReviewerIDTouser")
+  review_review_ReviewedIDTouser   review[]           @relation("review_ReviewedIDTouser")
+  trip                             trip[]
+}
+
+enum passengerbooking_BookingStatus {
   Pending
   Confirmed
+  Rejected
+}
+
+enum review_ReviewType {
+  Driver
+  Passenger
+}
+
+enum trip_TripStatus {
+  Scheduled
+  Completed
   Cancelled
 }
