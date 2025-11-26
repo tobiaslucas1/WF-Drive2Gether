@@ -11,16 +11,16 @@ console.log("Api is running!")
 
 //endpoints
 const carsRouter = require('./routes/cars');
-//const messagesRouter = require('./routes/messages');
+const messagesRouter = require('./routes/messages');
 const passengersRouter = require('./routes/passengers');
-//const reviewsRouter = require('./routes/reviews');
+const reviewsRouter = require('./routes/reviews');
 const tripsRouter = require('./routes/trips');
 const userRouter = require('./routes/users');
 
 app.use('/cars', carsRouter);
-//app.use('/messages', messagesRouter);
+app.use('/messages', messagesRouter);
 app.use('/passengers', passengersRouter);
-//app.use('/reviews', reviewsRouter);
+app.use('/reviews', reviewsRouter);
 app.use('/trips', tripsRouter);
 app.use('/users', userRouter);
 

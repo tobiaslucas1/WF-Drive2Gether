@@ -12,16 +12,28 @@ const prisma = new PrismaClient();
 // return array of users
 // ------------------------------
 router.get('/', async (req, res) => {
-  const users = await prisma.user.findMany();
+  const users = await prisma.user.findMany({
+    select: { // never return password
+      UserID: true,
+      FirstName: true,
+      LastName: true,
+      Email: true,
+      DateOfBirth: true,
+      PhoneNumber: true,
+      Address: true,
+      CreatedAt: true,
+    }
+  });
   res.json(users);
 });
 
+
 // ------------------------------
 // [Post] users 
+// Registreert een nieuwe gebruiker
 // ------------------------------
 router.post('/', async (req, res) => {
-  const { FirstName, LastName, Age, PhoneNumber, Email, Address, Picture, Password, Role } = req.body;
-  
+  const { FirstName, LastName, DateOfBirth, PhoneNumber, Email, Address, Password,} = req.body;  
   // Check if user with this email already exists
   const checkUserExists = await prisma.user.findMany({
     where: {
@@ -29,6 +41,8 @@ router.post('/', async (req, res) => {
     }
   });
   
+  const hashedPassword = Password; // placeholder ZONDER hashing!
+
   if (checkUserExists.length > 0) {
     res.json({
       "status": "user with this email already exists"
@@ -38,40 +52,48 @@ router.post('/', async (req, res) => {
       data: {
         FirstName,
         LastName,
-        Age,
+        DateOfBirth,
         PhoneNumber,
         Email,
         Address,
-        Picture,
-        Password,
-        Role
+        PasswordHash: hashedPassword
+      },
+      select:{ // Never Returns the Password
+        UserID: true,
+        FirstName: true,
+        Email:true,
+        CreatedAt: true,
       }
     });
     res.json(newUser);
   }
 });
 
+
 // ------------------------------
 // [Put] users 
 // ------------------------------
 router.put('/:id', async (req, res) => {
   let userId = req.params.id;
-  let { FirstName, LastName, Age, PhoneNumber, Email, Address, Picture, Password, Role } = req.body;
+  let { FirstName, LastName, DateOfBirth, PhoneNumber, Email, Address, Password } = req.body;
   
+
   let updatedUser = await prisma.user.update({
     where: {
-      ID: parseInt(userId)
+      UserID: parseInt(userId)
     },
     data: {
       FirstName,
       LastName,
-      Age,
+      DateOfBirth,
       PhoneNumber,
       Email,
-      Address,
-      Picture,
-      Password,
-      Role
+      Address
+    },
+    select: {
+      UserID: true,
+      FirstName: true,
+      Email: true,
     }
   });
   
@@ -86,7 +108,7 @@ router.delete('/:id', async (req, res) => {
   
   const deletedUser = await prisma.user.delete({
     where: {
-      ID: parseInt(userId)
+      UserID: parseInt(userId)
     }
   });
   

@@ -8,15 +8,21 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 
-
 // ------------------------------
 // [Get] cars
-// return array of cars
+// return array of cars 
 // ------------------------------
 router.get('/', async (req, res) => {
   const cars = await prisma.car.findMany({
     include: {
-      user: true
+      Owner: {
+        select: {
+          UserId: true,
+          Firstname: true,
+          LastName: true,
+          Email: true,
+        }
+      }
     }
   });
   res.json(cars);
@@ -27,7 +33,7 @@ router.get('/', async (req, res) => {
 // return created car 
 // ------------------------------
 router.post('/', async (req, res) => {
-  const { Model, Brand, LicensePlate, Color, DriverLicenseImage, IdentityCardImage, DriverID } = req.body;
+  const { Model, Brand, LicensePlate, Color,Seats, OwnerID } = req.body;
   
   // Check if car with this license plate already exists
   const checkCarExists = await prisma.car.findMany({
@@ -46,10 +52,9 @@ router.post('/', async (req, res) => {
         Model,
         Brand,
         LicensePlate,
+        Seats: parseInt(Seats), // seats saved as an INT
         Color,
-        DriverLicenseImage,
-        IdentityCardImage,
-        DriverID
+        OwnerID: parseInt(OwnerID)
       }
     });
     res.json(newCar);
@@ -61,32 +66,36 @@ router.post('/', async (req, res) => {
 // return updated car object
 // ------------------------------
 router.put('/:id', async (req, res) => {
-  let carId = req.params.id;
-  let { Model, Brand, LicensePlate, Color, DriverLicenseImage, IdentityCardImage } = req.body;
+  const carId = req.params.id;
+  let { Model, Brand, LicensePlate, Color, Seats } = req.body;
   
   let updatedCar = await prisma.car.update({
     where: {
-      ID: parseInt(carId)
+      CarID: parseInt(carId)
     },
     data: {
       Model,
       Brand,
       LicensePlate,
       Color,
-      DriverLicenseImage,
-      IdentityCardImage
+      Seats,
     }
   });
   
   res.json(updatedCar);
 });
 
+
+// --------------------------------------------------------
+// [DELETE] /cars/:id
+// Delets a car.
+// --------------------------------------------------------
 router.delete('/:id', async (req, res) => {
   const carId = req.params.id;
   
   const deletedCar = await prisma.car.delete({
     where: {
-      ID: parseInt(carId)
+      CarID: parseInt(carId)
     }
   });
   

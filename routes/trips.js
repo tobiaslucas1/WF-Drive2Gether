@@ -5,7 +5,17 @@ const express = require('express');
 const router = express.Router();
 
 const { PrismaClient } = require('@prisma/client'); 
+const { use } = require('react');
 const prisma = new PrismaClient();
+
+const userSelectFields = {
+    UserID: true,
+    FirstName: true,
+    LastName: true,
+    Email: true,
+};
+
+
 
 // ------------------------------
 // [Get] trips
@@ -14,36 +24,81 @@ const prisma = new PrismaClient();
 router.get('/', async (req, res) => {
   const trips = await prisma.trip.findMany({
     include: {
-      car: {
+      Car: true,
+      Driver: {
+        select : userSelectFields
+      },
+      Bookings: {
         include: {
-          user: true
+          Passenger: {
+              select: userSelectFields
+          }
         }
       },
-      tripPassenger: {
-        include: {
-          user: true
-        }
-      }
+      Reviews: true
     }
   });
-  res.json(trips);
+ }) 
+res.json(trips);
+
+// ------------------------------
+// [Get]  /trips/:id
+// return details of a specific trip
+// ------------------------------
+router.get('/:id', async (req, res) => {
+  const tripId = parseInt(req.params.id);
+
+  const trips = await prisma.trip.findMany({
+    where: {TripID: tripId},
+    include: {
+      Car: true,
+      Driver: {
+        select : userSelectFields
+      },
+      Bookings: {
+        include: {
+          Passenger: {
+              select: userSelectFields
+          }
+        }
+      },
+      Reviews: true
+    }
+  });
+
+res.json(trips);
+
+if (!trip) 
+  {
+    return res.json({ status: "Fout", message: `Rit met ID ${tripId} niet gevonden.` });
+  }
 });
+
 
 // ------------------------------
 // [Post] Trips
 // return created trip 
+// Moet nog bekijken met de Price en seatsoffered
 // ------------------------------
 router.post('/', async (req, res) => {
-  const { DeparturePlace, DepartureTime, ArrivalPlace, Price, PaymentMethod, CarID } = req.body;
+  const { DriverID, CarID, StartLocation, EndLocation, DepartureTime, Price, SeatsOffered, PaymentMethod } = req.body;
   
   const newTrip = await prisma.trip.create({
     data: {
-      DeparturePlace,
-      DepartureTime: new Date(DepartureTime),
-      ArrivalPlace,
-      Price,
+      DriverID: parseInt(DriverID),
+      CarID: parseInt(CarID),
+      StartLocation,
+      EndLocation,
       PaymentMethod,
-      CarID
+      DepartureTime: new Date(DepartureTime),
+      Price: parseFloat(Price),
+      SeatsOffered: parseInt(SeatsOffered),
+      SeatsBooked: 0, 
+      TripStatus: 'Scheduled',
+    },
+    include: {
+      Driver: {select: userSelectFields},
+      Car: true
     }
   });
   
@@ -53,22 +108,29 @@ router.post('/', async (req, res) => {
 
 // ------------------------------
 // [Put] Trips
-// return updated trip 
+// Update trip
+// Moet nog bekijken met de Price en seatsoffered
 // ------------------------------
 router.put('/:id', async (req, res) => {
-  let tripId = req.params.id;
-  let { DeparturePlace, DepartureTime, ArrivalPlace, Price, PaymentMethod } = req.body;
+  const tripId = req.params.id;
+  const {StartLocation, EndLocation, DepartureTime, Price, SeatsOffered, TripStatus, PaymentMethod } = req.body;
   
-  let updatedTrip = await prisma.trip.update({
+  const updatedTrip = await prisma.trip.update({
     where: {
-      ID: parseInt(tripId)
+      TripID: parseInt(tripId)
     },
     data: {
-      DeparturePlace,
+      StartLocation,
+      EndLocation,
       DepartureTime: new Date(DepartureTime),
-      ArrivalPlace,
+      SeatsOffered,
       Price,
-      PaymentMethod
+      TripStatus,
+      PaymentMethod,
+    },
+    include: {
+      Driver: {select : userSelectFields},
+      Car: true
     }
   });
   
@@ -77,38 +139,21 @@ router.put('/:id', async (req, res) => {
 
 // ------------------------------
 // [Delete] trips
-// return boolean (true or false)
+// Deletes/Cancelles a trip
 //-------------------------------
 router.delete('/:id', async (req, res) => {
   const tripId = req.params.id;
   
   const deletedTrip = await prisma.trip.delete({
     where: {
-      ID: parseInt(tripId)
+      TripID: parseInt(tripId)
     }
   });
   
   res.send(deletedTrip);
 });
 
-// ------------------------------
-// [Post] Book Passenger on Trip
-// return created booking
-// ------------------------------
-router.post('/:tripId/:passengerId/book', async (req, res) => {
-  const { tripId, passengerId } = req.params;
-  const { Status } = req.body;
 
-  const booking = await prisma.tripPassenger.create({
-    data: {
-      TripID: parseInt(tripId),
-      PassengerID: parseInt(passengerId),
-      Status: Status || 'Pending'
-    }
-  });
-
-  res.json(booking);
-});
 
 
 module.exports = router;
