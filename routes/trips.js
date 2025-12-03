@@ -7,38 +7,27 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client'); 
 const prisma = new PrismaClient();
 
-const userSelectFields = {
-    UserID: true,
-    FirstName: true,
-    LastName: true,
-    Email: true,
-};
-
-
-
 // ------------------------------
 // [Get] trips
 // return array of trips
 // ------------------------------
 router.get('/', async (req, res) => {
   const trips = await prisma.trip.findMany({
-    include: {
-      Car: true,
-      Driver: {
-        select : userSelectFields
-      },
-      Bookings: {
-        include: {
-          Passenger: {
-              select: userSelectFields
-          }
-        }
-      },
-      Reviews: true
+    select: {
+      TripID: true,
+      DriverID: true,
+      CarID: true,
+      StartLocation: true,
+      EndLocation: true,
+      DepartureTime: true,
+      Price: true,
+      SeatsBooked: true,
+      SeatsOffered: true,
+      TripStatus: true,
     }
   })
   res.json(trips);
- })
+})
 
 
 // ------------------------------
@@ -46,60 +35,65 @@ router.get('/', async (req, res) => {
 // return details of a specific trip
 // ------------------------------
 router.get('/:id', async (req, res) => {
-  const tripId = parseInt(req.params.id);
+  const TripID = parseInt(req.params.id);
 
-  const trips = await prisma.trip.findMany({
-    where: {TripID: tripId},
-    include: {
-      Car: true,
-      Driver: {
-        select : userSelectFields
-      },
-      Bookings: {
-        include: {
-          Passenger: {
-              select: userSelectFields
-          }
-        }
-      },
-      Reviews: true
+  const trip = await prisma.trip.findUnique({
+    where: {TripID},
+    select: {
+      TripID: true,
+      DriverID: true,
+      CarID: true,
+      StartLocation: true,
+      EndLocation: true,
+      DepartureTime: true,
+      Price: true,
+      SeatsBooked: true,
+      SeatsOffered: true,
+      TripStatus: true,
     }
     
   });
 
-res.json(trips);
+  if (!trip) 
+    {
+      return res.json({ 
+        status: "Fout",
+         message: `Rit met ID ${TripID} niet gevonden.`
+         });
+    } 
 
-if (!trip) 
-  {
-    return res.json({ status: "Fout", message: `Rit met ID ${tripId} niet gevonden.` });
-  }
+  res.json(trip);
 });
 
 
 // ------------------------------
 // [Post] Trips
 // return created trip 
-// Moet nog bekijken met de Price en seatsoffered
+// Payment method still needs to be added 
 // ------------------------------
 router.post('/', async (req, res) => {
-  const { DriverID, CarID, StartLocation, EndLocation, DepartureTime, Price, SeatsOffered, PaymentMethod } = req.body;
-  
+  const DriverID = req.body.DriverID;
+  const CarID = req.body.CarID;
+  const StartLocation = req.body.StartLocation;
+  const EndLocation = req.body.EndLocation;
+  const DepartureTime = req.body.DepartureTime;
+  const Price = req.body.Price;
+  const SeatsOffered = req.body.SeatsOffered;
+  const SeatsBooked = req.body.SeatsBooked || 0; // default is 0 
+  const TripStatus = req.body.TripStatus;
+
+
   const newTrip = await prisma.trip.create({
     data: {
       DriverID: parseInt(DriverID),
       CarID: parseInt(CarID),
       StartLocation,
       EndLocation,
-      PaymentMethod,
       DepartureTime: new Date(DepartureTime),
       Price: parseFloat(Price),
       SeatsOffered: parseInt(SeatsOffered),
-      SeatsBooked: 0, 
-      TripStatus: 'Scheduled',
-    },
-    include: {
-      Driver: {select: userSelectFields},
-      Car: true
+      SeatsBooked: parseInt(SeatsBooked),
+      TripStatus: "Scheduled",
     }
   });
   
@@ -110,29 +104,37 @@ router.post('/', async (req, res) => {
 // ------------------------------
 // [Put] Trips
 // Update trip
-// Moet nog bekijken met de Price en seatsoffered
+// DOESNT WORK !!!!!!!!!! 
+// I think Because of Foreign Keys
 // ------------------------------
 router.put('/:id', async (req, res) => {
-  const tripId = req.params.id;
-  const {StartLocation, EndLocation, DepartureTime, Price, SeatsOffered, TripStatus, PaymentMethod } = req.body;
-  
+  const TripID = req.params.id;
+
+  const DriverID = req.body.DriverID;
+  const CarID = req.body.CarID;
+  const StartLocation = req.body.StartLocation;
+  const EndLocation = req.body.EndLocation;
+  const DepartureTime = req.body.DepartureTime;
+  const Price = req.body.Price;
+  const SeatsOffered = req.body.SeatsOffered;
+  const SeatsBooked = req.body.SeatsBooked || 0; // default is 0 
+  const TripStatus = req.body.TripStatus;  
+
   const updatedTrip = await prisma.trip.update({
     where: {
-      TripID: parseInt(tripId)
+      TripID: parseInt(TripID)
     },
     data: {
+      DriverID: parseInt(DriverID),
+      CarID: parseInt(CarID),
       StartLocation,
       EndLocation,
       DepartureTime: new Date(DepartureTime),
-      SeatsOffered,
-      Price,
+      Price: parseFloat(Price),
+      SeatsOffered: parseInt(SeatsOffered),
+      SeatsBooked: parseInt(SeatsBooked),
       TripStatus,
-      PaymentMethod,
     },
-    include: {
-      Driver: {select : userSelectFields},
-      Car: true
-    }
   });
   
   res.json(updatedTrip);
@@ -143,11 +145,11 @@ router.put('/:id', async (req, res) => {
 // Deletes/Cancelles a trip
 //-------------------------------
 router.delete('/:id', async (req, res) => {
-  const tripId = req.params.id;
+  const TripID = req.params.id;
   
   const deletedTrip = await prisma.trip.delete({
     where: {
-      TripID: parseInt(tripId)
+      TripID: parseInt(TripID)
     }
   });
   

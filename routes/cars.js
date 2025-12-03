@@ -14,15 +14,14 @@ const prisma = new PrismaClient();
 // ------------------------------
 router.get('/', async (req, res) => {
   const cars = await prisma.car.findMany({
-    include: {
-      Owner: {
-        select: {
-          UserId: true,
-          Firstname: true,
-          LastName: true,
-          Email: true,
-        }
-      }
+    select: {
+      CarID: true,
+      Model: true,
+      Brand: true,
+      LicensePlate: true,
+      Color: true,
+      Seats: true,
+      OwnerID: true
     }
   });
   res.json(cars);
@@ -33,8 +32,15 @@ router.get('/', async (req, res) => {
 // return created car 
 // ------------------------------
 router.post('/', async (req, res) => {
-  const { Model, Brand, LicensePlate, Color,Seats, OwnerID } = req.body;
   
+  const Model = req.body.Model;
+  const Brand = req.body.Brand;
+  const LicensePlate = req.body.LicensePlate;
+  const Color = req.body.Color;
+  const Seats = req.body.Seats;
+  const OwnerID = req.body.OwnerID;
+  const IsVerified = req.body.IsVerified;
+
   // Check if car with this license plate already exists
   const checkCarExists = await prisma.car.findMany({
     where: {
@@ -54,7 +60,8 @@ router.post('/', async (req, res) => {
         LicensePlate,
         Seats: parseInt(Seats), // seats saved as an INT
         Color,
-        OwnerID: parseInt(OwnerID)
+        OwnerID: parseInt(OwnerID),
+        IsVerified
       }
     });
     res.json(newCar);
@@ -66,12 +73,18 @@ router.post('/', async (req, res) => {
 // return updated car object
 // ------------------------------
 router.put('/:id', async (req, res) => {
-  const carId = req.params.id;
-  let { Model, Brand, LicensePlate, Color, Seats } = req.body;
+  const CarID = req.params.id;
+
+  const Model = req.body.Model;
+  const Brand = req.body.Brand;
+  const LicensePlate = req.body.LicensePlate;
+  const Color = req.body.Color;
+  const Seats = req.body.Seats;
+  const IsVerified = req.body.IsVerified;
   
-  let updatedCar = await prisma.car.update({
+  const updatedCar = await prisma.car.update({
     where: {
-      CarID: parseInt(carId)
+      CarID: parseInt(CarID)
     },
     data: {
       Model,
@@ -79,6 +92,7 @@ router.put('/:id', async (req, res) => {
       LicensePlate,
       Color,
       Seats,
+      IsVerified
     }
   });
   

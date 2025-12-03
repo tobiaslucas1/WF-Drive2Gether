@@ -91,7 +91,6 @@ router.put('/:id', async (req, res) => {
   const Address = req.body.Address;
   const Email = req.body.Email;
   
-
   const updatedUser = await prisma.user.update({
     where: {
       UserID: parseInt(userId)
@@ -104,11 +103,6 @@ router.put('/:id', async (req, res) => {
       Email,
       Address
     },
-    select: {
-      UserID: true,
-      FirstName: true,
-      Email: true,
-    }
   });
   
   res.json(updatedUser);
